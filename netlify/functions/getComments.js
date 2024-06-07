@@ -5,16 +5,18 @@ exports.handler = async function(event, context) {
   try {
     console.log("Starting function execution");
 
-    // 環境変数の確認
     const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
     const privateKey = process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n');
     const spreadsheetId = process.env.SPREADSHEET_ID;
 
+    console.log("Environment variables loaded");
+    console.log("Client Email: ", clientEmail);
+    console.log("Spreadsheet ID: ", spreadsheetId);
+    console.log("Private Key (first 50 chars): ", privateKey.slice(0, 50));
+
     if (!clientEmail || !privateKey || !spreadsheetId) {
       throw new Error("Missing required environment variables");
     }
-
-    console.log("Environment variables loaded");
 
     const auth = new google.auth.GoogleAuth({
       credentials: {
