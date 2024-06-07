@@ -1,26 +1,26 @@
 const { google } = require('googleapis');
 const axios = require('axios');
-const sheets = google.sheets('v4');
+
+// 環境変数を使用して認証情報を設定
+const GOOGLE_CLIENT_EMAIL = process.env.GOOGLE_CLIENT_EMAIL;
+const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n');
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const LINE_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN;
+const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 
 exports.handler = async function(event, context) {
-  console.log("OPENAI_API_KEY: ", process.env.OPENAI_API_KEY);
-  console.log("GOOGLE_CLIENT_EMAIL: ", process.env.GOOGLE_CLIENT_EMAIL);
-  console.log("GOOGLE_PRIVATE_KEY: ", process.env.GOOGLE_PRIVATE_KEY ? "Loaded" : "Not Loaded");
-  console.log("LINE_ACCESS_TOKEN: ", process.env.LINE_ACCESS_TOKEN);
-  console.log("SPREADSHEET_ID: ", process.env.SPREADSHEET_ID);
-
   try {
+    // GoogleAuthオブジェクトの作成
     const auth = new google.auth.GoogleAuth({
       credentials: {
-        client_email: process.env.GOOGLE_CLIENT_EMAIL,
-        private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        client_email: GOOGLE_CLIENT_EMAIL,
+        private_key: GOOGLE_PRIVATE_KEY,
       },
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
 
     const client = await auth.getClient();
-    const spreadsheetId = process.env.SPREADSHEET_ID;
-    const sheetName = 'Sheet1';
+    const sheets = google.sheets({ version: 'v4', auth: client });
 
     const json = JSON.parse(event.body);
 
@@ -31,24 +31,23 @@ exports.handler = async function(event, context) {
     // ChatGPT APIを使って返信を生成
     const gptPrompt = `以下のメッセージに対して、丁寧で親切な一行の返信をしてください: "${message}"`;
 
-    const gptResponse = await axios.post('https://api.openai.com/v1/completions', {
-      model: 'text-davinci-003',
-      prompt: gptPrompt,
-      max_tokens: 50,
+    const gptResponse = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: gptPrompt }],
     }, {
       headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json'
       }
     });
 
-    const replyMessage = gptResponse.data.choices[0].text.trim();
+    const replyMessage = gptResponse.data.choices[0].message.content.trim();
 
     // スプレッドシートにメッセージと返信を追加
     await sheets.spreadsheets.values.append({
       auth: client,
-      spreadsheetId,
-      range: `${sheetName}!A:B`,
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'Sheet1!A:B',
       valueInputOption: 'RAW',
       requestBody: {
         values: [[message, replyMessage]],
@@ -64,7 +63,7 @@ exports.handler = async function(event, context) {
     await axios.post('https://api.line.me/v2/bot/message/reply', lineReplyMessage, {
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.LINE_ACCESS_TOKEN}`
+        'Authorization': `Bearer ${LINE_ACCESS_TOKEN}`
       }
     });
 
