@@ -9,6 +9,12 @@ const LINE_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 
 exports.handler = async function(event, context) {
+  console.log("OPENAI_API_KEY: ", process.env.OPENAI_API_KEY);
+  console.log("GOOGLE_CLIENT_EMAIL: ", process.env.GOOGLE_CLIENT_EMAIL);
+  console.log("GOOGLE_PRIVATE_KEY: ", process.env.GOOGLE_PRIVATE_KEY ? "Loaded" : "Not Loaded");
+  console.log("LINE_ACCESS_TOKEN: ", process.env.LINE_ACCESS_TOKEN);
+  console.log("SPREADSHEET_ID: ", process.env.SPREADSHEET_ID);
+
   try {
     // GoogleAuthオブジェクトの作成
     const auth = new google.auth.GoogleAuth({
@@ -25,6 +31,10 @@ exports.handler = async function(event, context) {
     const json = JSON.parse(event.body);
 
     // LINEからのメッセージデータを抽出
+    if (!json.events || json.events.length === 0 || !json.events[0].message || !json.events[0].replyToken) {
+      throw new Error("Invalid JSON structure");
+    }
+
     const message = json.events[0].message.text;
     const replyToken = json.events[0].replyToken;
 
