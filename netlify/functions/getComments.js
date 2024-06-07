@@ -1,18 +1,16 @@
 const { google } = require('googleapis');
 const axios = require('axios');
 const sheets = google.sheets('v4');
+const openai = require('openai');
 
 exports.handler = async function(event, context) {
   try {
-    // 環境変数の確認
+    // Logging environment variables for debugging
     console.log("OPENAI_API_KEY: ", process.env.OPENAI_API_KEY);
     console.log("GOOGLE_CLIENT_EMAIL: ", process.env.GOOGLE_CLIENT_EMAIL);
     console.log("GOOGLE_PRIVATE_KEY: ", process.env.GOOGLE_PRIVATE_KEY ? "Loaded" : "Not Loaded");
     console.log("LINE_ACCESS_TOKEN: ", process.env.LINE_ACCESS_TOKEN);
     console.log("SPREADSHEET_ID: ", process.env.SPREADSHEET_ID);
-
-    // リクエストボディの内容をログに出力
-    console.log("Request body: ", event.body);
 
     const auth = new google.auth.GoogleAuth({
       credentials: {
@@ -33,11 +31,12 @@ exports.handler = async function(event, context) {
     const replyToken = json.events[0].replyToken;
 
     // ChatGPT APIを使って返信を生成
-    const gptPrompt = `以下のメッセージに対して、丁寧で親切な一行の返信をしてください: "${message}"`;
-
     const gptResponse = await axios.post('https://api.openai.com/v1/chat/completions', {
       model: 'gpt-4',
-      messages: [{ role: 'user', content: gptPrompt }],
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant.' },
+        { role: 'user', content: message }
+      ],
     }, {
       headers: {
         'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
