@@ -31,4 +31,12 @@ function loadComments() {
                     size: random(10, 64),
                     color: color(random(255), random(255), random(255))
                 };
-                comments.p
+                comments.push(newText);
+            }
+        })
+        .catch(error => console.error('Error loading comments:', error));
+}
+
+function windowResized() {
+    resizeCanvas(windowWidth, windowHeight);
+}
