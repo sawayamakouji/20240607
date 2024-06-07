@@ -1,9 +1,14 @@
 const { google } = require('googleapis');
 const axios = require('axios');
+const sheets = google.sheets('v4');
 
 exports.handler = async function(event, context) {
   try {
-    const auth = await google.auth.getClient({
+    if (!event.body) {
+      throw new Error('Request body is empty');
+    }
+
+    const auth = new google.auth.GoogleAuth({
       credentials: {
         client_email: process.env.GOOGLE_CLIENT_EMAIL,
         private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
@@ -11,8 +16,7 @@ exports.handler = async function(event, context) {
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
 
-    const sheets = google.sheets({ version: 'v4', auth });
-
+    const client = await auth.getClient();
     const spreadsheetId = process.env.SPREADSHEET_ID;
     const sheetName = 'Sheet1';
 
@@ -39,6 +43,7 @@ exports.handler = async function(event, context) {
 
     // スプレッドシートにメッセージと返信を追加
     await sheets.spreadsheets.values.append({
+      auth: client,
       spreadsheetId,
       range: `${sheetName}!A:B`,
       valueInputOption: 'RAW',
