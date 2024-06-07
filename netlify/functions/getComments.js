@@ -1,10 +1,9 @@
 const { google } = require('googleapis');
 const axios = require('axios');
-const sheets = google.sheets('v4');
 
 exports.handler = async function(event, context) {
   try {
-    const auth = new google.auth.GoogleAuth({
+    const auth = await google.auth.getClient({
       credentials: {
         client_email: process.env.GOOGLE_CLIENT_EMAIL,
         private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
@@ -12,7 +11,8 @@ exports.handler = async function(event, context) {
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
 
-    const client = await auth.getClient();
+    const sheets = google.sheets({ version: 'v4', auth });
+
     const spreadsheetId = process.env.SPREADSHEET_ID;
     const sheetName = 'Sheet1';
 
@@ -23,7 +23,7 @@ exports.handler = async function(event, context) {
     const replyToken = json.events[0].replyToken;
 
     // ChatGPT APIを使って返信を生成
-    const gptPrompt = `以下のメッセージに対して、親切で前向きな一行の返信をしてください: "${message}"`;
+    const gptPrompt = `以下のメッセージに対して、丁寧で親切な一行の返信をしてください: "${message}"`;
 
     const gptResponse = await axios.post('https://api.openai.com/v1/chat/completions', {
       model: 'gpt-4',
@@ -39,7 +39,6 @@ exports.handler = async function(event, context) {
 
     // スプレッドシートにメッセージと返信を追加
     await sheets.spreadsheets.values.append({
-      auth: client,
       spreadsheetId,
       range: `${sheetName}!A:B`,
       valueInputOption: 'RAW',
